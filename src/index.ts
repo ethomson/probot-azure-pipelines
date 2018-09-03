@@ -77,16 +77,35 @@ class RebuildCommand {
     return false
   }
 
-  async connectToBuildService(): Promise<IBuildApi> {
+  connectToVSTS(): vsts.WebApi {
     var url = process.env.VSTS_URL
     var auth_handler = vsts.getPersonalAccessTokenHandler(process.env.VSTS_PAT as string)
-    var connection = new vsts.WebApi(url as string, auth_handler)
-    return await connection.getBuildApi()
+    return new vsts.WebApi(url as string, auth_handler)
   }
 
-  async loadBuildDefinitionsForPullRequest(vsts_build: IBuildApi, pull_request: PullRequest): Promise<BuildDefinitionsForProject[]>
+  async connectToBuildService(): Promise<IBuildApi> {
+    return await this.connectToVSTS().getBuildApi()
+  }
+
+  async loadProjects(vsts_build: IBuildApi)
   {
-    var projects = process.env.VSTS_PROJECTS!.split(',')
+    if (process.env.VSTS_PROJECTS) {
+      return process.env.VSTS_PROJECTS.split(',')
+    }
+
+    var coreApi = await this.connectToVSTS().getCoreApi()
+    var projects = await coreApi.getProjects()
+    var project_names: string[] = [ ]
+
+    projects.forEach((p) => {
+      project_names.push(p.name)
+    })
+
+    return project_names
+  }
+
+  async loadBuildDefinitionsForPullRequest(vsts_build: IBuildApi, projects: string[], pull_request: PullRequest): Promise<BuildDefinitionsForProject[]>
+  {
     var build_definitions: BuildDefinitionsForProject[] = [ ]
 
     for (var project of projects) {
@@ -227,11 +246,16 @@ class RebuildCommand {
         this.fail(`I couldn't connect to the build service`)
         return
       }
+
+      var projects = await this.loadProjects(vsts_build)
+      if (!projects) {
+        this.fail('this project does not have any VSTS projects configured')
+      }
       
-      var definitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, pull_request)
+      var definitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, projects, pull_request)
 
       if (definitions.length == 0) {
-        this.fail('does not have any pull request builds configured')
+        this.fail('this project does not have any pull request builds configured')
         return
       }
 
@@ -263,9 +287,8 @@ class RebuildCommand {
   }
 }
 
-if (!process.env.VSTS_URL || !process.env.VSTS_PAT || !process.env.VSTS_PROJECTS) {
-  console.warn('Missing VSTS configuration')
-  console.warn('Set the VSTS_URL, VSTS_PAT and VSTS_PROJECTS environment variables')
+if (!process.env.VSTS_URL || !process.env.VSTS_PAT) {
+  console.warn('Missing VSTS configuration: set the VSTS_URL and VSTS_PATH variables')
   process.exit(1)
 }
 
