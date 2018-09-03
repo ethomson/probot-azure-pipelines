@@ -5,6 +5,11 @@ import { Build, BuildDefinition, PullRequestTrigger, BuildReason } from 'vso-nod
 import './buildapi-extensions'
 import './github-types'
 
+interface BuildDefinitionsForProject {
+  project: string,
+  build_definitions: BuildDefinition[]
+}
+
 class RebuildCommand {
   probot: Context
   log: Logger
@@ -79,87 +84,107 @@ class RebuildCommand {
     return await connection.getBuildApi()
   }
 
-  async loadBuildDefinitionsForPullRequest(vsts_build: IBuildApi, pull_request: PullRequest): Promise<BuildDefinition[]>
+  async loadBuildDefinitionsForPullRequest(vsts_build: IBuildApi, pull_request: PullRequest): Promise<BuildDefinitionsForProject[]>
   {
-    var build_definitions: BuildDefinition[] = [ ]
+    var projects = process.env.VSTS_PROJECTS!.split(',')
+    var build_definitions: BuildDefinitionsForProject[] = [ ]
 
-    this.log.debug('Looking for a pull request build definitions for ' + process.env.VSTS_PROJECT + ' in ' + process.env.VSTS_URL)
+    for (var project of projects) {
+      var pr_definitions: BuildDefinition[] = [ ]
 
-    var buildDefinitions = await vsts_build.getDefinitions(
-      process.env.VSTS_PROJECT as string,
-      undefined,
-      this.repo_fullname,
-      "GitHub",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      true)
+      this.log.debug('Looking for a pull request build definitions for ' + project + ' in ' + process.env.VSTS_URL)
 
-    buildDefinitions.forEach((dr) => {
-      var definition = dr as BuildDefinition
-      var prDefinition = false
+      var all_definitions = await vsts_build.getDefinitions(
+        project,
+        undefined,
+        this.repo_fullname,
+        "GitHub",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true)
 
-      this.log.debug('Examining build definition ' + definition.id)
+      all_definitions.forEach((dr) => {
+        var definition = dr as BuildDefinition
+        var is_pr_definition = false
 
-      definition.triggers.some((t) => {
-        if (t.triggerType.toString() == 'pullRequest') {
-          var trigger = t as PullRequestTrigger
-        
-          trigger.branchFilters.some((branch) => {
-            if (branch == '+' + pull_request.base.ref) {
-              this.log.trace('Build definition ' + definition.id + ' is a pull request build for ' + pull_request.base.ref)
-              prDefinition = true
+        this.log.debug('Examining build definition ' + definition.id)
+
+        definition.triggers.some((t) => {
+          if (t.triggerType.toString() == 'pullRequest') {
+            var trigger = t as PullRequestTrigger
+          
+            trigger.branchFilters.some((branch) => {
+              if (branch == '+' + pull_request.base.ref) {
+                this.log.trace('Build definition ' + definition.id + ' is a pull request build for ' + pull_request.base.ref)
+                is_pr_definition = true
+                return true
+              }
+
+              return false
+            })
+
+            if (is_pr_definition) {
               return true
             }
-
-            return false
-          })
-
-          if (prDefinition) {
-            return true
           }
-        }
 
-        return false
+          return false
+        })
+
+        if (is_pr_definition) {
+          this.log.trace('Found build definition ' + definition.id + ' for pull requests')
+          pr_definitions.push(definition)
+        }
       })
 
-      if (prDefinition) {
-        this.log.trace('Found build definition ' + definition.id + ' for pull requests')
-        build_definitions.push(definition)
+      if (pr_definitions.length > 0) {
+        build_definitions.push({
+          project: project,
+          build_definitions: pr_definitions
+        })
       }
-    })
+    }
 
     return build_definitions
   }
 
-  loadBuilds(vsts_build: IBuildApi, build_definitions: BuildDefinition[]): Promise<Build[]> {
-    return vsts_build.getBuilds(
-      process.env.VSTS_PROJECT as string,
-      build_definitions.map(({id}) => id),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      BuildReason.PullRequest,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      1,
-      undefined,
-      undefined,
-      'refs/pull/' + this.issue_number + '/merge',
-      undefined,
-      this.repo_fullname,
-      "GitHub")
+  async loadBuilds(vsts_build: IBuildApi, definitions_for_projects: BuildDefinitionsForProject[]): Promise<Build[]> {
+    var builds: Build[] = [ ]
+
+    for (var definition_for_project of definitions_for_projects) {
+      var builds_for_project = await vsts_build.getBuilds(
+        definition_for_project.project,
+        definition_for_project.build_definitions.map(({id}) => id),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        BuildReason.PullRequest,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        1,
+        undefined,
+        undefined,
+        'refs/pull/' + this.issue_number + '/merge',
+        undefined,
+        this.repo_fullname,
+        "GitHub")
+
+      builds = builds.concat(builds_for_project)
+    }
+
+    return builds
   }
 
   async requeueBuilds(vsts_build: IBuildApi, sourceBuilds: Build[]): Promise<Build[]> {
@@ -203,14 +228,14 @@ class RebuildCommand {
         return
       }
       
-      var buildDefinitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, pull_request)
+      var definitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, pull_request)
 
-      if (buildDefinitions.length == 0) {
+      if (definitions.length == 0) {
         this.fail('does not have any pull request builds configured')
         return
       }
 
-      var failedBuilds = await this.loadBuilds(vsts_build, buildDefinitions)
+      var failedBuilds = await this.loadBuilds(vsts_build, definitions)
 
       if (failedBuilds.length == 0) {
         this.fail('I was not able to find any builds to requeue')
@@ -238,8 +263,9 @@ class RebuildCommand {
   }
 }
 
-if (!process.env.VSTS_URL || !process.env.VSTS_PAT) {
-  console.warn('Missing VSTS configuration: set the VSTS_URL and VSTS_PAT environment variables')
+if (!process.env.VSTS_URL || !process.env.VSTS_PAT || !process.env.VSTS_PROJECTS) {
+  console.warn('Missing VSTS configuration')
+  console.warn('Set the VSTS_URL, VSTS_PAT and VSTS_PROJECTS environment variables')
   process.exit(1)
 }
 
