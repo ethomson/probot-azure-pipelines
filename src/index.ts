@@ -184,42 +184,49 @@ class RebuildCommand {
 
   async run(): Promise<void> {
     this.log.debug("Asked by " + this.user.login + " to rebuild pull request " + this.issue_number)
-    
-    var pull_request = await this.loadPullRequest()
-    if (!pull_request) {
-      this.fail('this is not a pull request')
-      return
+
+    try {
+      var pull_request = await this.loadPullRequest()
+      if (!pull_request) {
+        this.fail('this is not a pull request')
+        return
+      }
+
+      if (!await this.ensureCollaboratorPermissions()) {
+        this.fail(`you're not allowed to do that`)
+        return
+      }
+
+      var vsts_build = await this.connectToBuildService()
+      if (!vsts_build) {
+        this.fail(`I couldn't connect to the build service`)
+        return
+      }
+      
+      var buildDefinitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, pull_request)
+
+      if (buildDefinitions.length == 0) {
+        this.fail('does not have any pull request builds configured')
+        return
+      }
+
+      var failedBuilds = await this.loadBuilds(vsts_build, buildDefinitions)
+
+      if (failedBuilds.length == 0) {
+        this.fail('I was not able to find any builds to requeue')
+        return
+      }
+
+      var queuedBuilds = await this.requeueBuilds(vsts_build, failedBuilds)
+
+      if (queuedBuilds.length == 0) {
+        this.fail('I was not able to requeue builds')
+        return
+      }
     }
-
-    if (!await this.ensureCollaboratorPermissions()) {
-      this.fail(`you're not allowed to do that`)
-      return
-    }
-
-    var vsts_build = await this.connectToBuildService()
-    if (!vsts_build) {
-      this.fail(`I couldn't connect to the build service`)
-      return
-    }
-    
-    var buildDefinitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, pull_request)
-
-    if (buildDefinitions.length == 0) {
-      this.fail('does not have any pull request builds configured')
-      return
-    }
-
-    var failedBuilds = await this.loadBuilds(vsts_build, buildDefinitions)
-
-    if (failedBuilds.length == 0) {
-      this.fail('I was not able to find any builds to requeue')
-      return
-    }
-
-    var queuedBuilds = await this.requeueBuilds(vsts_build, failedBuilds)
-
-    if (queuedBuilds.length == 0) {
-      this.fail('I was not able to requeue builds')
+    catch(e) {
+      this.fail('an error occurred while trying to requeue the build')
+      this.log.error(e)
       return
     }
   
