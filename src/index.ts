@@ -137,17 +137,19 @@ class RebuildCommand {
         definition.triggers.some((t) => {
           if (t.triggerType.toString() == 'pullRequest') {
             var trigger = t as PullRequestTrigger
-          
-            trigger.branchFilters.some((branch) => {
-              if (branch == '+' + pull_request.base.ref) {
-                this.log.trace('Build definition ' + definition.id + ' is a pull request build for ' + pull_request.base.ref)
-                is_pr_definition = true
-                return true
-              }
 
-              return false
-            })
+            if (trigger.branchFilters) {
+              trigger.branchFilters.some((branch) => {
+                if (branch == '+' + pull_request.base.ref) {
+                  this.log.trace('Build definition ' + definition.id + ' is a pull request build for ' + pull_request.base.ref)
+                  is_pr_definition = true
+                  return true
+                }
 
+                return false
+              })
+            }
+            
             if (is_pr_definition) {
               return true
             }
