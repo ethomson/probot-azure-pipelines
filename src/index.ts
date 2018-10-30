@@ -77,6 +77,19 @@ class RebuildCommand {
     return false
   }
 
+  async ensureAuthorship(pr: PullRequest) {
+    this.log.debug('Ensuring that ' + this.user.login + ' authored pull request ' + this.issue_number)
+
+    if (this.user.login == pr.user.login) {
+      this.log.trace(this.user.login + ' is the pull request author')
+      return true
+    }
+
+    this.log.trace(this.user.login + ' is not the pull request author, permission validation failed')
+
+    return false
+  }
+
   connectToVSTS(): vsts.WebApi {
     var url = process.env.AZURE_DEVOPS_URL || process.env.VSTS_URL
     var pat = process.env.AZURE_DEVOPS_PAT || process.env.VSTS_PATH
@@ -278,7 +291,7 @@ class RebuildCommand {
         return
       }
 
-      if (!await this.ensureCollaboratorPermissions()) {
+      if (!(await this.ensureCollaboratorPermissions() || await this.ensureAuthorship(pull_request))) {
         this.fail(`you're not allowed to do that`)
         return
       }
