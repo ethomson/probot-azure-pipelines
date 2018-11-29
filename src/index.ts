@@ -248,7 +248,25 @@ class RebuildCommand {
     return false
   }
 
+  createBuildResultsLink(build: Build, message: string) {
+    var markdown = ''
+
+    if (build._links.web.href) {
+      markdown += '['
+    }
+
+    markdown += message
+
+    if (build._links.web.href) {
+      markdown += '](' + build._links.web.href + ')'
+    }
+
+    return markdown
+  }
+
   async run(): Promise<void> {
+    var queuedBuilds;
+
     this.log.debug("Asked by " + this.user.login + " to rebuild pull request " + this.issue_number)
 
     try {
@@ -288,7 +306,7 @@ class RebuildCommand {
         return
       }
 
-      var queuedBuilds = await this.requeueBuilds(vsts_build, failedBuilds)
+      queuedBuilds = await this.requeueBuilds(vsts_build, failedBuilds)
 
       if (queuedBuilds.length == 0) {
         this.fail('I was not able to requeue builds')
@@ -301,8 +319,20 @@ class RebuildCommand {
       return
     }
 
+    var reply = 'Okay, @' + this.user.login + ', I started to rebuild this pull request'
+
+    if (queuedBuilds.length == 1) {
+      reply += ' as ' + this.createBuildResultsLink(queuedBuilds[0], 'build #' + queuedBuilds[0].id) + '.'
+    } else {
+      reply += ".\n\n"
+
+      queuedBuilds.forEach(build => {
+        reply += "* " + this.createBuildResultsLink(build, 'Build #' + build.id + ' in ' + build.definition!.name)
+      });
+    }
+
     this.probot.github.issues.createComment(this.probot.issue({
-      body: 'Okay, @' + this.user.login + ', I started to rebuild this pull request.'
+      body: reply
     }))
 
     this.log.info('Rebuilding pull request ' + this.issue_number + ' for ' + this.user.login)
