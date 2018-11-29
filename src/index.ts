@@ -297,7 +297,7 @@ class RebuildCommand {
 }
 
 if (!process.env.VSTS_URL || !process.env.VSTS_PAT) {
-  console.warn('Missing VSTS configuration: set the VSTS_URL and VSTS_PATH variables')
+  console.warn('Missing VSTS configuration: set the VSTS_URL and VSTS_PAT variables')
   process.exit(1)
 }
 
