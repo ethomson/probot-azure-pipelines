@@ -1,5 +1,7 @@
 # Probot for Azure Pipelines (probot-azure-pipelines)
 
+[![Build Status](https://dev.azure.com/ethomson/probot-azure-pipelines/_apis/build/status/ethomson.probot-azure-pipelines)](https://dev.azure.com/ethomson/probot-azure-pipelines/_build/latest?definitionId=39)
+
 A GitHub App for [Azure Pipelines](https://azure.microsoft.com/en-us/services/devops/pipelines/)
 built with [Probot](https://github.com/probot/probot).
 
