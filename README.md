@@ -1,19 +1,19 @@
-# probot-vsts-build
+# Probot for Azure Pipelines (probot-azure-pipelines)
 
-A GitHub App for [VSTS Build](https://visualstudio.com/team-services/),
+A GitHub App for [Azure Pipelines](https://azure.microsoft.com/en-us/services/devops/pipelines/)
 built with [Probot](https://github.com/probot/probot).
 
-If you have GitHub repositories that store your code, and VSTS build
-pipelines that perform CI builds for pull requests, then this app enables
-project contributors to requeue pull requests builds just by typing
-`/rebuild` as a pull request comment.
+If you have GitHub repositories that store your code, and Azure Pipelines
+build that perform continuous integration (CI) builds for validating pull
+requests, then this app enables project contributors to requeue pull
+requests builds just by typing `/rebuild` as a pull request comment.
 
 ![Example of GitHub pull request discussion](https://user-images.githubusercontent.com/1130014/45150803-9c5f5580-b1c4-11e8-8d71-36b86fae0342.png)
 
 This is useful if you have occasionally flaky tests or infrastructure,
 and it allows project contributors to requeue a build right from GitHub.
 This lets you provide access to requeue a build without necessarily providing
-people broader access to the build definition in VSTS.
+people broader access to the build definition in Azure Pipelines.
 
 Note that `/rebuild` is limited to project contributors on GitHub (people
 listed in the contributors group, or who are part of a team for this
@@ -22,9 +22,9 @@ repository).
 ## Installation
 
 Since this application will need access to queue builds on your behalf
-in Visual Studio Team Services, you will need to set up your own instance
-of this application.  There's no publicly available GitHub App instance
-that you can just install.
+in Azure Pipelines, you will need to set up your own instance of this
+application.  There's no publicly available GitHub App instance that you
+can just install.
 
 ### Create a GitHub App
 
@@ -34,22 +34,23 @@ are three important considerations:
 
 * **Webhook URL**: This is the URL of your deployed application.  If
   you're deploying to Azure, for example, this will be
-  `my-vsts-build-app.azurewebsites.net`.
+  `my-azure-pipelines-build-app.azurewebsites.net`.
 * **Webhook secret**: Create a secret key of random data that will be used
   to authenticate to your application.
 * **Private key**: Generate a new private key and save it to disk.
 
 Make sure that this application is **private** since it will have access
-to your VSTS repository, and the ability to queue builds on your behalf.
+to your Azure Pipelines account, and the ability to queue builds on your
+behalf.
 
-### Create a VSTS Personal Access Token
+### Create an Azure DevOps Personal Access Token
 
 A Personal Access Token (PAT) allows you to provide this app the ability
-to queue builds on your behalf.  In the VSTS portal, select your settings
-in the upper right and select Security.
+to queue builds on your behalf.  In the Azure DevOps portal, select your
+settings in the upper right and select Security.
 
 In the Personal Access Token section, click "Add" to create a new PAT.
-Give it a description that is memorable, like "probot-vsts-build".
+Give it a description that is memorable, like "probot-azure-pipelines".
 
 In "Authorized Scopes", change the option to selected scopes, then select
 "Build (read and execute)".  Limiting the scope of an access token is
@@ -58,21 +59,21 @@ always good security posture.
 Finally, save your new PAT in your password manager of choice.  You'll
 need it again for deployment.
 
-### Deploying to Azure using VSTS Build and Deployment Pipelines
+### Deploying to Azure using Azure Pipelines
 
 It's easy to deploy this to an Azure app service running node.js on Linux.
 (Make sure you're using node.js 8.9 or newer.)
 
 1. Fork this repository on GitHub.
 
-2. Set up a new VSTS Build pipeline:
+2. Set up a new Azure Pipelines build definition:
 
    1. **Location**: GitHub
-   2. **Repository**: Select your fork of `probot-vsts-build`
+   2. **Repository**: Select your fork of `probot-azure-pipelines`
    3. **Template**: Use the suggested Node.js-based build
    4. **Run**: Queue a build
 
-3. Set up a new VSTS Release pipeline:
+3. Set up a new Azure Pipelines release definition:
 
    1. Create an **Azure App Service Deployment**
    2. Add an artifact: select the **build artifact** produced by your
@@ -97,20 +98,20 @@ It's easy to deploy this to an Azure app service running node.js on Linux.
 
       `perl -pe 's/\n/\\n/' < pemfile`
 
-   * **VSTS_URL**: the URL of the Visual Studio Team Services account
-     that contains the builds that are queued for your GitHub repository.
-   * **VSTS_PAT**: your Personal Access Token
+   * **AZURE_DEVOPS_URL**: the URL of the Azure DevOps account that contains
+     the builds that are queued for your GitHub repository.
+   * **AZURE_DEVOPS_PAT**: your Personal Access Token
 
 ### Deploy Manually
 
-If you don't want to set up a VSTS pipeline into Azure, you can run build
-and run this application manually.
+If you don't want to set up a Azure Pipelines build and release definition
+into Azure, you can also build and run this application manually.
 
 To download and build the latest release of this application:
 
 ```
-git clone --branch latest https://github.com/ethomson/probot-vsts-build
-cd probot-vsts-build
+git clone --branch latest https://github.com/ethomson/probot-azure-pipelines
+cd probot-azure-pipelines
 npm build
 ```
 
@@ -119,9 +120,9 @@ Guide](https://probot.github.io/docs/deployment/) for setting up your
 deployment.  This is a standard Probot app, but does require two custom
 environment variables:
 
-* **VSTS_URL**: the URL of the Visual Studio Team Services account that
+* **AZURE_DEVOPS_URL**: the URL of the Azure DevOps account that
   contains the builds that are queued for your GitHub repository.
-* **VSTS_PAT**: your Personal Access Token
+* **AZURE_DEVOPS_PAT**: your Personal Access Token
 
 ### Install for Your Repositories
 

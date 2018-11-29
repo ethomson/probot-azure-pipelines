@@ -1,16 +1,19 @@
 {
-  "name": "probot-vsts-build",
-  "version": "0.0.1",
-  "description": "VSTS Build integration for Probot",
-  "author": "Edward Thomson <ethomson@edwardthomson.com> (https://github.com/ethomson/probot-vsts-build)",
+  "name": "probot-azure-pipelines",
+  "version": "0.0.2",
+  "description": "Azure Pipelines integration for Probot",
+  "author": "Edward Thomson <ethomson@edwardthomson.com> (https://github.com/ethomson/probot-azure-pipelines)",
   "license": "MIT",
-  "repository": "https://github.com/ethomson/probot-vsts-build.git",
-  "homepage": "https://github.com/ethomson/probot-vsts-build",
-  "bugs": "https://github.com/ethomson/probot-vsts-build/issues",
+  "repository": "https://github.com/ethomson/probot-azure-pipelines.git",
+  "homepage": "https://github.com/ethomson/probot-azure-pipelines",
+  "bugs": "https://github.com/ethomson/probot-azure-pipelines/issues",
   "keywords": [
     "probot",
     "github",
-    "probot-app"
+    "probot-app",
+    "azure-pipelines",
+    "pipelines",
+    "ci-cd"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
