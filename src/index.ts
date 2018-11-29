@@ -1,7 +1,7 @@
 import { Application, Context, Logger } from 'probot'
-import * as vsts from 'vso-node-api';
-import { IBuildApi } from 'vso-node-api/BuildApi';
-import { Build, BuildDefinition, PullRequestTrigger, BuildReason } from 'vso-node-api/interfaces/BuildInterfaces';
+import * as vsts from 'azure-devops-node-api';
+import { IBuildApi } from 'azure-devops-node-api/BuildApi';
+import { Build, BuildDefinition, PullRequestTrigger, BuildReason } from 'azure-devops-node-api/interfaces/BuildInterfaces';
 import './buildapi-extensions'
 import './github-types'
 
@@ -38,16 +38,16 @@ class RebuildCommand {
       this.log.trace('Issue ' + this.issue_number + ' is not a pull request, issue type validation failed')
       return null
     }
-      
+
     this.log.trace('Issue ' + this.issue_number + ' is a pull request')
-  
+
     var pr = await this.probot.github.pullRequests.get({ owner: this.repo_owner, repo: this.repo_name, number: this.issue_number })
-  
+
     if (!pr.data.base) {
       this.log.trace('Pull request ' + this.probot.payload.issue.number + ' has no base branch')
       return null
     }
-  
+
     this.log.debug('Pull request ' + this.probot.payload.issue.number + ' is targeting base branch ' + pr.data.base.ref)
     return pr.data as PullRequest
   }
@@ -98,7 +98,9 @@ class RebuildCommand {
     var project_names: string[] = [ ]
 
     projects.forEach((p) => {
-      project_names.push(p.name)
+      if (p.name) {
+        project_names.push(p.name as string)
+      }
     })
 
     return project_names
@@ -140,13 +142,13 @@ class RebuildCommand {
         }
 
         definition.triggers.some((t) => {
-          if (t.triggerType.toString() == 'pullRequest') {
+          if (t.triggerType && t.triggerType.toString() == 'pullRequest') {
             var trigger = t as PullRequestTrigger
 
             if (!trigger.branchFilters) {
               return false
             }
-          
+
             trigger.branchFilters.some((branch) => {
               if (branch == '+' + pull_request.base.ref) {
                 this.log.trace('Build definition ' + definition.id + ' is a pull request build for ' + pull_request.base.ref)
@@ -186,9 +188,12 @@ class RebuildCommand {
     var builds: Build[] = [ ]
 
     for (var definition_for_project of definitions_for_projects) {
+      var definition_ids: number[] = [ ]
+      definition_for_project.build_definitions.forEach(def => { if (def.id) { definition_ids.push(def.id) } })
+
       var builds_for_project = await vsts_build.getBuilds(
         definition_for_project.project,
-        definition_for_project.build_definitions.map(({id}) => id),
+        definition_ids,
         undefined,
         undefined,
         undefined,
@@ -219,6 +224,11 @@ class RebuildCommand {
     var queuedBuilds: Build[] = []
 
     for (var sourceBuild of sourceBuilds) {
+      if (!sourceBuild.id || !sourceBuild.project) {
+        this.log.warn("Invalid build information for " + sourceBuild);
+        continue;
+      }
+
       this.log.debug("Requeuing source build ID " + sourceBuild.id + " for " + sourceBuild.project.name)
 
       var queuedBuild = await vsts_build.requeueBuild(sourceBuild, sourceBuild.id, sourceBuild.project.id)
@@ -260,7 +270,7 @@ class RebuildCommand {
       if (!projects) {
         this.fail('this project does not have any VSTS projects configured')
       }
-      
+
       var definitions = await this.loadBuildDefinitionsForPullRequest(vsts_build, projects, pull_request)
 
       if (definitions.length == 0) {
@@ -287,7 +297,7 @@ class RebuildCommand {
       this.log.error(e)
       return
     }
-  
+
     this.probot.github.issues.createComment(this.probot.issue({
       body: 'Okay, @' + this.user.login + ', I started to rebuild this pull request.'
     }))

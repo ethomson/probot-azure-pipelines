@@ -17,15 +17,15 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "nodemon --exec \"npm start\"",
+    "dev": "nodemon --watch src --exec \"npm start\"",
     "start": "probot run ./lib/index.js",
     "lint": "standard **/*.ts --fix",
     "test": "jest && standard **/*.ts",
     "test:watch": "jest --watch --notify --notifyMode=change --coverage"
   },
   "dependencies": {
-    "probot": "^7.0.0",
-    "vso-node-api": "^6.5.0"
+    "azure-devops-node-api": "^7.0.0",
+    "probot": "^7.0.0"
   },
   "devDependencies": {
     "@types/jest": "^23.1.5",

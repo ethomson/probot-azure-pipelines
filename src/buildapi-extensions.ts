@@ -1,9 +1,9 @@
-import vsom = require('vso-node-api/VsoClient');
-import { BuildApi } from 'vso-node-api/BuildApi';
-import { Build, TypeInfo } from 'vso-node-api/interfaces/BuildInterfaces';
+import vsom = require('azure-devops-node-api/VsoClient');
+import { BuildApi } from 'azure-devops-node-api/BuildApi';
+import { Build, TypeInfo } from 'azure-devops-node-api/interfaces/BuildInterfaces';
 import * as restm from 'typed-rest-client/RestClient';
 
-declare module 'vso-node-api/BuildApi' {
+declare module 'azure-devops-node-api/BuildApi' {
   interface IBuildApi {
     requeueBuild(build: Build, buildId: number, project?: string): Promise<Build>
   }
