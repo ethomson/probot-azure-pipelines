@@ -291,7 +291,7 @@ class RebuildCommand {
         return
       }
 
-      if (!(await this.ensureCollaboratorPermissions() || await this.ensureAuthorship(pull_request))) {
+      if (!(await this.ensureAuthorship(pull_request) || await this.ensureCollaboratorPermissions())) {
         this.fail(`you're not allowed to do that`)
         return
       }
