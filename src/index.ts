@@ -84,6 +84,7 @@ class RebuildCommand {
   }
 
   async connectToBuildService(): Promise<IBuildApi> {
+    this.log.trace('Connecting to Azure Pipelines')
     return await this.connectToVSTS().getBuildApi()
   }
 
@@ -92,6 +93,8 @@ class RebuildCommand {
     if (process.env.VSTS_PROJECTS) {
       return process.env.VSTS_PROJECTS.split(',')
     }
+
+    this.log.trace('Querying Azure Pipelines projects')
 
     var coreApi = await this.connectToVSTS().getCoreApi()
     var projects = await coreApi.getProjects()
