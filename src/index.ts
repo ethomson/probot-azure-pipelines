@@ -78,8 +78,9 @@ class RebuildCommand {
   }
 
   connectToVSTS(): vsts.WebApi {
-    var url = process.env.VSTS_URL
-    var auth_handler = vsts.getPersonalAccessTokenHandler(process.env.VSTS_PAT as string)
+    var url = process.env.AZURE_DEVOPS_URL || process.env.VSTS_URL
+    var pat = process.env.AZURE_DEVOPS_PAT || process.env.VSTS_PATH
+    var auth_handler = vsts.getPersonalAccessTokenHandler(pat as string)
     return new vsts.WebApi(url as string, auth_handler)
   }
 
@@ -90,8 +91,9 @@ class RebuildCommand {
 
   async loadProjects(vsts_build: IBuildApi)
   {
-    if (process.env.VSTS_PROJECTS) {
-      return process.env.VSTS_PROJECTS.split(',')
+    var project_list = process.env.AZURE_DEVOPS_PROJECTS || process.env.VSTS_PROJECTS
+    if (project_list) {
+      return project_list.split(',')
     }
 
     this.log.trace('Querying Azure Pipelines projects')
@@ -116,7 +118,7 @@ class RebuildCommand {
     for (var project of projects) {
       var pr_definitions: BuildDefinition[] = [ ]
 
-      this.log.debug('Looking for a pull request build definitions for ' + project + ' in ' + process.env.VSTS_URL)
+      this.log.debug('Looking for a pull request build definitions for ' + project + ' in ' + (process.env.AZURE_DEVOPS_URL || process.env.VSTS_URL))
 
       var all_definitions = await vsts_build.getDefinitions(
         project,
@@ -339,8 +341,8 @@ class RebuildCommand {
   }
 }
 
-if (!process.env.VSTS_URL || !process.env.VSTS_PAT) {
-  console.warn('Missing VSTS configuration: set the VSTS_URL and VSTS_PAT variables')
+if ((!process.env.AZURE_DEVOPS_URL && !process.env.VSTS_URL) || (!process.env.AZURE_DEVOPS_PAT && !process.env.VSTS_PAT)) {
+  console.warn('Missing Azure DevOps configuration: set the AZURE_DEVOPS_URL and AZURE_DEVOPS_PAT variables')
   process.exit(1)
 }
 
