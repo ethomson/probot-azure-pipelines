@@ -1,6 +1,6 @@
 {
   "name": "probot-azure-pipelines",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Azure Pipelines integration for Probot",
   "author": "Edward Thomson <ethomson@edwardthomson.com> (https://github.com/ethomson/probot-azure-pipelines)",
   "license": "MIT",
