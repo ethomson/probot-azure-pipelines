@@ -1,6 +1,6 @@
 {
   "name": "probot-azure-pipelines",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Azure Pipelines integration for Probot",
   "author": "Edward Thomson <ethomson@edwardthomson.com> (https://github.com/ethomson/probot-azure-pipelines)",
   "license": "MIT",
@@ -15,7 +15,10 @@
     "pipelines",
     "ci-cd"
   ],
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
+    "prepublish": "npm run build",
     "build": "tsc -p tsconfig.json",
     "dev": "nodemon --watch src --exec \"npm start\"",
     "start": "probot run ./lib/index.js",
